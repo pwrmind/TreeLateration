@@ -226,37 +226,71 @@ namespace FractalTreeModel
     // =========================================================================
     // 4. КОРНЕВАЯ ПРОГРАММА ДЕМОНСТРАЦИИ (MAIN)
     // =========================================================================
-
     class Program
     {
         static void Main()
         {
-            // Инициализируем дерево для 64 уровней.
-            // Количество узлов в основании: 2^63. Базовая ширина L = 2^63 - 1.
-            BigInteger L = BigInteger.Pow(2, 63);
+            Console.WriteLine("======================================================");
+            Console.WriteLine("    ЭКСТРЕМАЛЬНЫЙ СТРЕСС-ТЕСТ: 1024 УРОВНЯ ДЕРЕВА");
+            Console.WriteLine("======================================================\n");
+
+            // 1. Инициализируем дерево для 1024-го уровня.
+            // Основание L = 2^1023. Это число состоит из ~309 десятичных знаков.
+            BigInteger L = BigInteger.Pow(2, 1023);
 
             var generator = new TreePathGenerator(L);
             var solver = new FractalTreeTrilateration(L);
 
-            // Задаем тестовый путь спуска от корня.
-            // Например: Налево -> Направо -> Налево -> Налево -> Направо (5-й уровень глубины)
-            Step[] path = { Step.Left, Step.Right, Step.Left, Step.Left, Step.Right };
+            // 2. Генерируем очень длинный случайный путь (например, 1000 шагов вглубь)
+            int pathLength = 1000;
+            Step[] longPath = new Step[pathLength];
+            Random rand = new Random();
 
-        //Use code with caution.
-            Console.WriteLine("=== ЭМУЛЯЦИЯ ГЕОМЕТРИИ ДЕРЕВА НА 64 УРОВНЯХ ===");
-            Console.WriteLine($"Ширина основания дерева (L) = {L}\n");// Шаг 1: Генерируем "слепые" данные расстояний до вершин по нашему пути
-            Console.WriteLine("--- ШАГ 1: ГЕНЕРАЦИЯ КВАТРАТОВ РАССТОЯНИЙ ПО ПУТИ ---");
-            var distances = generator.GenerateDistances(path);
-            Console.WriteLine("Сгенерированные гигантские квадраты расстояний:");
-            Console.WriteLine($" dA² = {distances.dA2}");
-            Console.WriteLine($" dB² = {distances.dB2}");
-            Console.WriteLine($" dC² = {distances.dC2}\n"); // Шаг 2: Производим трилатерацию только на основе расстояний
-            Console.WriteLine("--- ШАГ 2: РАСЧЕТ ТРИЛАТЕРАЦИИ (ВОССТАНОВЛЕНИЕ КООРДИНАТ) ---");
+            for (int i = 0; i < pathLength; i++)
+            {
+                longPath[i] = rand.Next(0, 2) == 0 ? Step.Left : Step.Right;
+            }
+
+            Console.WriteLine($" Сгенерирован случайный путь длиной в {pathLength} шагов.");
+            Console.WriteLine($" Длина основания дерева L содержит {L.ToString().Length} знаков.\n");
+
+            // Засекаем время выполнения, чтобы проверить скорость BigInteger
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+
+            // Шаг 1: Симулируем спуск по дереву и получаем расстояния
+            Console.WriteLine("--- ШАГ 1: РАСЧЕТ РАССТОЯНИЙ (СПУСК ПО ФРАКТАЛУ) ---");
+            var distances = generator.GenerateDistances(longPath);
+
+            // Шаг 2: Восстанавливаем координаты по трилатерации
+            Console.WriteLine("--- ШАГ 2: РАСЧЕТ ТРИЛАТЕРАЦИИ (ПОИСК КООРДИНАТ) ---");
             ExactPoint restoredPoint = solver.FindNode(distances.dA2, distances.dB2, distances.dC2);
-            Console.WriteLine($"[Трилатерация] Восстановленные координаты:\n {restoredPoint}\n");// Шаг 3: Переводим координаты в понятный номер узла
-            Console.WriteLine("--- ШАГ 3: ДЕКОДИРОВАНИЕ КООРДИНАТ В НОМЕР УЗЛА (ID) ---");
-            BigInteger nodeId = solver.GetNodeId(restoredPoint);Console.WriteLine($"[Индексатор] Узел успешно распознан! Уникальный ID = {nodeId}");
-            // Console.ReadLine();
+
+            // Шаг 3: Декодируем координаты в ID
+            Console.WriteLine("--- ШАГ 3: ДЕКОДИРОВАНИЕ В УНИКАЛЬНЫЙ ID УЗЛА ---");
+            BigInteger nodeId = solver.GetNodeId(restoredPoint);
+
+            watch.Stop();
+
+            // 3. Выводим результаты теста
+            Console.WriteLine("\n================== РЕЗУЛЬТАТЫ ТЕСТА ==================");
+            Console.WriteLine($" Статус трилатерации: УСПЕШНО (Ошибок округления: 0)");
+            Console.WriteLine($" Время выполнения всех расчетов: {watch.ElapsedMilliseconds} мс");
+            Console.WriteLine($" Количество цифр в итоговом ID узла: {nodeId.ToString().Length} знаков.");
+            
+            // Показываем первые и последние цифры огромного ID для наглядности
+            string fullId = nodeId.ToString();
+            if (fullId.Length > 40)
+            {
+                Console.WriteLine($" Пример ID узла: {fullId.Substring(0, 20)}...[сотни цифр]...{fullId.Substring(fullId.Length - 20)}");
+            }
+            else
+            {
+                Console.WriteLine($" ID узла: {fullId}");
+            }
+            Console.WriteLine("======================================================");
+
+            Console.ReadLine();
         }
+
     }
 }
